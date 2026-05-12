@@ -107,6 +107,14 @@
 
     .btn-secondary:hover { background: var(--border); }
 
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #dc2626);
+      color: white;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
     .card-hover { transition: all 0.3s ease; }
     .card-hover:hover {
       transform: translateY(-4px);
@@ -126,19 +134,20 @@
     .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-light); }
     .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
     .badge-blocked { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .badge-gerente { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
 
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-20px); }
-      to { opacity: 1; transform: translateX(0); }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     .animate-fadeInUp { animation: fadeInUp 0.6s ease forwards; }
-    .animate-slideIn { animation: slideIn 0.4s ease forwards; }
+    .animate-pulse { animation: pulse 2s ease-in-out infinite; }
 
     .stagger-1 { animation-delay: 0.1s; opacity: 0; }
     .stagger-2 { animation-delay: 0.2s; opacity: 0; }
@@ -203,6 +212,17 @@
 
     .hidden { display: none !important; }
 
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-online { background: #10b981; }
+    .status-offline { background: #ef4444; }
+    .status-connecting { background: #f59e0b; animation: pulse 1s ease-in-out infinite; }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -219,7 +239,7 @@
 <body class="bg-pattern grid-pattern">
   
   <!-- Loading Overlay -->
-  <div id="loadingOverlay" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50" style="display: none;">
+  <div id="loadingOverlay" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
     <div class="text-center">
       <div class="spinner mx-auto mb-3" style="width: 40px; height: 40px; border-width: 3px;"></div>
       <p style="color: var(--muted);">Carregando...</p>
@@ -243,16 +263,16 @@
         </div>
         
         <div class="flex items-center gap-4">
-          <div class="hidden sm:flex items-center gap-2 text-sm text-[var(--muted)]">
-            <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <div class="flex items-center gap-2 text-sm text-[var(--muted)]">
+            <span id="statusDot" class="status-indicator status-connecting"></span>
             <span id="statusText">Conectando...</span>
           </div>
-          <div class="flex items-center gap-3 pl-4 border-l border-[var(--border)]">
+          <div id="userArea" class="flex items-center gap-3 pl-4 border-l border-[var(--border)]">
             <div class="text-right hidden sm:block">
               <p class="text-sm font-medium text-white" id="userName">Selecione um usuário</p>
               <p class="text-xs text-[var(--muted)]" id="userCode">-</p>
             </div>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+            <div id="userAvatar" class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
@@ -274,7 +294,7 @@
           Gestão de <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Prospects</span>
         </h2>
         <p class="text-[var(--muted)] text-lg max-w-2xl mx-auto">
-          Selecione seu perfil e gerencie seus prospects.
+          Selecione seu perfil para gerenciar seus prospects.
         </p>
       </section>
 
@@ -289,16 +309,38 @@
             </div>
             <div>
               <h3 class="font-display font-semibold text-xl text-white">Seu Perfil</h3>
-              <p class="text-sm text-[var(--muted)]">Selecione seu nome para continuar</p>
+              <p class="text-sm text-[var(--muted)]">Selecione seu nome ou acesse como gerente</p>
             </div>
           </div>
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-[var(--muted)] mb-2">Representante *</label>
+              <label class="block text-sm font-medium text-[var(--muted)] mb-2">Representante</label>
               <select id="selectUser" class="input-field w-full px-4 py-3 rounded-xl text-lg">
                 <option value="">Carregando representantes...</option>
               </select>
+            </div>
+            
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <span class="w-full border-t border-[var(--border)]"></span>
+              </div>
+              <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-[var(--card)] text-[var(--muted)]">ou</span>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-[var(--muted)] mb-2">Acesso Gerente</label>
+              <div class="flex gap-2">
+                <input type="password" id="gerenteSenha" class="input-field flex-1 px-4 py-3 rounded-xl" placeholder="Digite a senha de gerente">
+                <button id="btnGerenteLogin" class="btn-secondary px-4 py-3 rounded-xl flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                  </svg>
+                  Entrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -398,10 +440,10 @@
         </div>
       </section>
 
-      <!-- Recent Prospects -->
+      <!-- Prospects List -->
       <section class="animate-fadeInUp stagger-3">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-display font-semibold text-xl text-white">Seus Prospects</h3>
+          <h3 class="font-display font-semibold text-xl text-white" id="listTitle">Selecione um usuário</h3>
           <button id="btnRefresh" class="text-sm text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 bg-transparent border-none cursor-pointer">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -417,16 +459,16 @@
                 <tr class="border-b border-[var(--border)]">
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Empresa</th>
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden sm:table-cell">CNPJ</th>
+                  <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden md:table-cell">Responsável</th>
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Status</th>
-                  <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden md:table-cell">Último Contato</th>
+                  <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden lg:table-cell">Atualizado</th>
                   <th class="text-right px-4 py-3 text-sm font-medium text-[var(--muted)]">Ações</th>
                 </tr>
               </thead>
               <tbody id="prospectsTable">
                 <tr>
-                  <td colspan="5" class="px-4 py-8 text-center text-[var(--muted)]">
-                    <div class="spinner mx-auto mb-2"></div>
-                    Selecione um representante...
+                  <td colspan="6" class="px-4 py-8 text-center text-[var(--muted)]">
+                    Selecione um representante acima para ver seus prospects.
                   </td>
                 </tr>
               </tbody>
@@ -557,7 +599,7 @@
               </div>
             </div>
             
-            <div class="flex gap-2">
+            <div id="detailActions" class="flex gap-2">
               <button id="btnAddFollowup" class="btn-primary py-2 px-4 rounded-lg text-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -751,12 +793,13 @@
     // =============================================
     // CONFIGURAÇÃO
     // =============================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxxFZFp0ofleUihxPWD6y_9ZIhWSY_icFM-gXOOPId04td8x8VzVcn6HpseJGWZcBl_/exec'; // <-- COLE SUA URL DO APPS SCRIPT AQUI
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyjIKAWHzzfCdLHA8lF0V7FzgPJVYwXS43JmMY5pyTQBhlsXboZ1ghGo7d2qrD_IMVR/exec'; // <-- COLE SUA URL DO APPS SCRIPT AQUI
 
-    // Usuário atual (selecionado via dropdown)
+    // Usuário atual
     let CURRENT_USER = {
       id: '',
-      nome: ''
+      nome: '',
+      tipo: 'representante'
     };
 
     let representantesList = [];
@@ -865,6 +908,24 @@
       loadingOverlay.style.display = show ? 'flex' : 'none';
     }
 
+    function setOnlineStatus(status) {
+      const statusDot = $('statusDot');
+      const statusText = $('statusText');
+      
+      statusDot.className = 'status-indicator';
+      
+      if (status === 'online') {
+        statusDot.classList.add('status-online');
+        statusText.textContent = 'Online';
+      } else if (status === 'offline') {
+        statusDot.classList.add('status-offline');
+        statusText.textContent = 'Offline';
+      } else {
+        statusDot.classList.add('status-connecting');
+        statusText.textContent = 'Conectando...';
+      }
+    }
+
     function getStatusBadgeClass(status) {
       const map = {
         'ativo': 'badge-active',
@@ -894,9 +955,11 @@
           representantesList = result.data || [];
           populateUserDropdown();
           populateResponsavelDropdown();
+          setOnlineStatus('online');
         }
       } catch (error) {
         console.error('Erro ao carregar representantes:', error);
+        setOnlineStatus('offline');
       }
     }
 
@@ -931,21 +994,23 @@
     // =============================================
     async function loadProspects() {
       const tbody = $('prospectsTable');
+      const listTitle = $('listTitle');
       
       if (!CURRENT_USER.id) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="5" class="px-4 py-8 text-center text-[var(--muted)]">
+            <td colspan="6" class="px-4 py-8 text-center text-[var(--muted)]">
               Selecione um representante acima para ver seus prospects.
             </td>
           </tr>
         `;
+        listTitle.textContent = 'Selecione um usuário';
         return;
       }
       
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" class="px-4 py-8 text-center text-[var(--muted)]">
+          <td colspan="6" class="px-4 py-8 text-center text-[var(--muted)]">
             <div class="spinner mx-auto mb-2"></div>
             Carregando...
           </td>
@@ -953,7 +1018,15 @@
       `;
 
       try {
-        const result = await api.get('getByUser', { userId: CURRENT_USER.id });
+        let result;
+        
+        if (CURRENT_USER.tipo === 'gerente') {
+          result = await api.get('getAllProspects', { senha: 'admin123' });
+          listTitle.textContent = 'Todos os Prospects (Gerente)';
+        } else {
+          result = await api.get('getByUser', { userId: CURRENT_USER.id });
+          listTitle.textContent = 'Seus Prospects';
+        }
         
         if (!result.success) {
           throw new Error(result.error || 'Erro ao carregar');
@@ -964,8 +1037,8 @@
         if (prospects.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="5" class="px-4 py-8 text-center text-[var(--muted)]">
-                Nenhum prospect cadastrado. Clique em "Novo Cadastro" para começar.
+              <td colspan="6" class="px-4 py-8 text-center text-[var(--muted)]">
+                Nenhum prospect encontrado.
               </td>
             </tr>
           `;
@@ -979,10 +1052,11 @@
               <p class="text-xs text-[var(--muted)] sm:hidden font-mono">${prospect.cnpj || '-'}</p>
             </td>
             <td class="px-4 py-4 font-mono text-sm text-[var(--muted)] hidden sm:table-cell">${prospect.cnpj || '-'}</td>
+            <td class="px-4 py-4 text-sm text-white hidden md:table-cell">${prospect.responsavelNome || '-'}</td>
             <td class="px-4 py-4">
               <span class="badge ${getStatusBadgeClass(prospect.status)}">${getStatusLabel(prospect.status)}</span>
             </td>
-            <td class="px-4 py-4 text-sm text-[var(--muted)] hidden md:table-cell">${formatDate(prospect.atualizadoEm || prospect.criadoEm)}</td>
+            <td class="px-4 py-4 text-sm text-[var(--muted)] hidden lg:table-cell">${formatDate(prospect.atualizadoEm || prospect.criadoEm)}</td>
             <td class="px-4 py-4 text-right">
               <button class="text-emerald-400 hover:text-emerald-300 transition-colors p-2" aria-label="Ver detalhes">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -993,25 +1067,19 @@
           </tr>
         `).join('');
 
-        // Add click handlers
         tbody.querySelectorAll('tr[data-id]').forEach(row => {
           row.addEventListener('click', () => showProspectDetail(row.dataset.id));
         });
-
-        $('statusDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-        $('statusText').textContent = 'Online';
         
       } catch (error) {
         console.error('Erro ao carregar prospects:', error);
         tbody.innerHTML = `
           <tr>
-            <td colspan="5" class="px-4 py-8 text-center text-red-400">
-              Erro ao carregar dados. Verifique a conexão.
+            <td colspan="6" class="px-4 py-8 text-center text-red-400">
+              Erro ao carregar dados.
             </td>
           </tr>
         `;
-        $('statusDot').className = 'w-2 h-2 rounded-full bg-red-500';
-        $('statusText').textContent = 'Offline';
       }
     }
 
@@ -1081,7 +1149,7 @@
       }
 
       container.innerHTML = followups.map((fp, index) => `
-        <div class="relative pl-12 pb-8 last:pb-0 animate-slideIn" style="animation-delay: ${index * 0.1}s">
+        <div class="relative pl-12 pb-8 last:pb-0" style="animation: fadeInUp 0.4s ease forwards; animation-delay: ${index * 0.1}s; opacity: 0;">
           <div class="timeline-dot">
             <span class="text-emerald-400 text-xs font-bold">${fp.id || index + 1}</span>
           </div>
@@ -1116,22 +1184,59 @@
       const selectedOption = e.target.options[e.target.selectedIndex];
       CURRENT_USER.id = e.target.value;
       CURRENT_USER.nome = selectedOption.dataset.nome || '';
+      CURRENT_USER.tipo = 'representante';
       
       $('userName').textContent = CURRENT_USER.nome || 'Selecione um usuário';
       $('userCode').textContent = CURRENT_USER.id || '-';
+      $('gerenteSenha').value = '';
       
       loadProspects();
       updateStats();
     });
 
+    // Gerente Login
+    $('btnGerenteLogin').addEventListener('click', async () => {
+      const senha = $('gerenteSenha').value.trim();
+      
+      if (!senha) {
+        showToast('Digite a senha de gerente', 'error');
+        return;
+      }
+      
+      setLoading(true);
+      
+      try {
+        const result = await api.get('getAllProspects', { senha: senha });
+        
+        if (!result.success) {
+          showToast(result.error || 'Senha incorreta', 'error');
+          setLoading(false);
+          return;
+        }
+        
+        CURRENT_USER.id = 'GER-0001';
+        CURRENT_USER.nome = 'Gerente';
+        CURRENT_USER.tipo = 'gerente';
+        
+        $('userName').textContent = 'Gerente (Admin)';
+        $('userCode').textContent = 'Acesso Total';
+        $('selectUser').value = '';
+        
+        loadProspects();
+        updateStats();
+        showToast('Acesso de gerente liberado!', 'success');
+        
+      } catch (error) {
+        console.error('Erro no login:', error);
+        showToast('Erro ao verificar senha', 'error');
+      } finally {
+        setLoading(false);
+      }
+    });
+
     // Search Form
     $('searchForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      if (!CURRENT_USER.id) {
-        showToast('Selecione seu perfil primeiro', 'error');
-        return;
-      }
       
       const cnpj = $('cnpjInput').value.trim();
       
@@ -1152,7 +1257,6 @@
         }
 
         if (result.exists) {
-          // Prospect exists
           const prospect = result.data;
           $('conflictEmpresa').textContent = prospect.razaoSocial || '-';
           $('conflictCnpj').textContent = prospect.cnpj || '-';
@@ -1161,15 +1265,12 @@
           $('conflictStatus').className = `badge ${getStatusBadgeClass(prospect.status)}`;
 
           if (prospect.responsavelId === CURRENT_USER.id) {
-            // Same agent
             $('conflictSameAgent').classList.remove('hidden');
             $('conflictOtherAgent').classList.add('hidden');
           } else {
-            // Other agent
             $('conflictSameAgent').classList.add('hidden');
             $('conflictOtherAgent').classList.remove('hidden');
             
-            // Update email link
             const emailBody = encodeURIComponent(`Olá, gostaria de solicitar acesso ao prospect:\n\nCNPJ: ${prospect.cnpj}\nEmpresa: ${prospect.razaoSocial}\nResponsável atual: ${prospect.responsavelNome}\n\nMotivo da solicitação: `);
             $('btnRequestAuth').href = `mailto:admin@empresa.com?subject=Solicitação de vínculo - ${prospect.razaoSocial}&body=${emailBody}`;
           }
@@ -1177,7 +1278,6 @@
           currentProspectId = prospect.id;
           openModal(conflictModal);
         } else {
-          // Prospect not found - allow new registration
           $('newCnpj').value = cnpj;
           showView('view-new-prospect');
           showToast('CNPJ disponível para cadastro', 'success');
@@ -1191,10 +1291,6 @@
 
     // New Prospect Button
     $('btnNewProspect').addEventListener('click', () => {
-      if (!CURRENT_USER.id) {
-        showToast('Selecione seu perfil primeiro', 'error');
-        return;
-      }
       $('newCnpj').value = '';
       showView('view-new-prospect');
     });
@@ -1364,15 +1460,13 @@
     // =============================================
     async function init() {
       setLoading(true);
+      setOnlineStatus('connecting');
       
       try {
         await loadRepresentantes();
-        $('statusDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
-        $('statusText').textContent = 'Online';
       } catch (error) {
         console.error('Erro na inicialização:', error);
-        $('statusDot').className = 'w-2 h-2 rounded-full bg-red-500';
-        $('statusText').textContent = 'Offline';
+        setOnlineStatus('offline');
       } finally {
         setLoading(false);
       }
