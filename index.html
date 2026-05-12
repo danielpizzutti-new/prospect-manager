@@ -107,14 +107,6 @@
 
     .btn-secondary:hover { background: var(--border); }
 
-    .btn-danger {
-      background: linear-gradient(135deg, var(--danger), #dc2626);
-      color: white;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-    }
-
     .card-hover { transition: all 0.3s ease; }
     .card-hover:hover {
       transform: translateY(-4px);
@@ -308,12 +300,12 @@
               </svg>
             </div>
             <div>
-              <h3 class="font-display font-semibold text-xl text-white">Seu Perfil</h3>
+              <h3 id="profileTitle" class="font-display font-semibold text-xl text-white">Seu Perfil</h3>
               <p class="text-sm text-[var(--muted)]">Selecione seu nome ou acesse como gerente</p>
             </div>
           </div>
 
-          <div class="space-y-4">
+          <div id="userSelectionArea" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-[var(--muted)] mb-2">Representante</label>
               <select id="selectUser" class="input-field w-full px-4 py-3 rounded-xl text-lg">
@@ -342,6 +334,27 @@
                 </button>
               </div>
             </div>
+          </div>
+
+          <!-- Logout Button (visible when logged as gerente) -->
+          <div id="gerenteLogoutArea" class="hidden">
+            <div class="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-4">
+              <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                <div>
+                  <p class="text-purple-400 font-medium">Logado como Gerente</p>
+                  <p class="text-sm text-[var(--muted)]">Você tem acesso a todos os prospects</p>
+                </div>
+              </div>
+            </div>
+            <button id="btnLogout" class="btn-secondary w-full py-3 rounded-xl flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+              Sair
+            </button>
           </div>
         </div>
       </section>
@@ -406,7 +419,7 @@
             </div>
             <div>
               <p class="text-2xl font-display font-bold text-white" id="statActive">-</p>
-              <p class="text-sm text-[var(--muted)]">Prospects Ativos</p>
+              <p class="text-sm text-[var(--muted)]" id="statActiveLabel">Prospects Ativos</p>
             </div>
           </div>
         </div>
@@ -420,7 +433,7 @@
             </div>
             <div>
               <p class="text-2xl font-display font-bold text-white" id="statPending">-</p>
-              <p class="text-sm text-[var(--muted)]">Follow-ups Pendentes</p>
+              <p class="text-sm text-[var(--muted)]" id="statPendingLabel">Follow-ups Pendentes</p>
             </div>
           </div>
         </div>
@@ -434,7 +447,7 @@
             </div>
             <div>
               <p class="text-2xl font-display font-bold text-white" id="statNew">-</p>
-              <p class="text-sm text-[var(--muted)]">Novos este Mês</p>
+              <p class="text-sm text-[var(--muted)]" id="statNewLabel">Novos este Mês</p>
             </div>
           </div>
         </div>
@@ -459,7 +472,7 @@
                 <tr class="border-b border-[var(--border)]">
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Empresa</th>
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden sm:table-cell">CNPJ</th>
-                  <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden md:table-cell">Responsável</th>
+                  <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]" id="thResponsavel">Responsável</th>
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)]">Status</th>
                   <th class="text-left px-4 py-3 text-sm font-medium text-[var(--muted)] hidden lg:table-cell">Atualizado</th>
                   <th class="text-right px-4 py-3 text-sm font-medium text-[var(--muted)]">Ações</th>
@@ -795,7 +808,6 @@
     // =============================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbxuPizD8jyGkzA4bROIbWl-LdPgF1I0B8WYSecIPd8psuw6_TbPOrFOOsKi3GdjRt07/exec'; // <-- COLE SUA URL DO APPS SCRIPT AQUI
 
-    // Usuário atual
     let CURRENT_USER = {
       id: '',
       nome: '',
@@ -945,6 +957,28 @@
     }
 
     // =============================================
+    // UI - MODO GERENTE
+    // =============================================
+    function setGerenteMode(isGerente) {
+      const profileTitle = $('profileTitle');
+      const userSelectionArea = $('userSelectionArea');
+      const gerenteLogoutArea = $('gerenteLogoutArea');
+      const thResponsavel = $('thResponsavel');
+      
+      if (isGerente) {
+        profileTitle.textContent = 'Acesso do Gerente';
+        userSelectionArea.classList.add('hidden');
+        gerenteLogoutArea.classList.remove('hidden');
+        thResponsavel.classList.remove('hidden');
+      } else {
+        profileTitle.textContent = 'Seu Perfil';
+        userSelectionArea.classList.remove('hidden');
+        gerenteLogoutArea.classList.add('hidden');
+        thResponsavel.classList.add('hidden');
+      }
+    }
+
+    // =============================================
     // REPRESENTANTES
     // =============================================
     async function loadRepresentantes() {
@@ -1045,6 +1079,8 @@
           return;
         }
 
+        const isGerente = CURRENT_USER.tipo === 'gerente';
+
         tbody.innerHTML = prospects.map(prospect => `
           <tr class="border-b border-[var(--border)] hover:bg-white/5 transition-colors cursor-pointer" data-id="${prospect.id}">
             <td class="px-4 py-4">
@@ -1052,7 +1088,7 @@
               <p class="text-xs text-[var(--muted)] sm:hidden font-mono">${prospect.cnpj || '-'}</p>
             </td>
             <td class="px-4 py-4 font-mono text-sm text-[var(--muted)] hidden sm:table-cell">${prospect.cnpj || '-'}</td>
-            <td class="px-4 py-4 text-sm text-white hidden md:table-cell">${prospect.responsavelNome || '-'}</td>
+            <td class="px-4 py-4 text-sm text-white ${isGerente ? '' : 'hidden'}">${prospect.responsavelNome || '-'}</td>
             <td class="px-4 py-4">
               <span class="badge ${getStatusBadgeClass(prospect.status)}">${getStatusLabel(prospect.status)}</span>
             </td>
@@ -1092,7 +1128,24 @@
       }
 
       try {
-        const result = await api.get('getStats', { userId: CURRENT_USER.id });
+        let result;
+        
+        if (CURRENT_USER.tipo === 'gerente') {
+          // Buscar stats totais
+          result = await api.get('getAllStats');
+          
+          // Atualizar labels para total
+          $('statActiveLabel').textContent = 'Total Ativos';
+          $('statPendingLabel').textContent = 'Total Pendentes';
+          $('statNewLabel').textContent = 'Total Novos/Mês';
+        } else {
+          result = await api.get('getStats', { userId: CURRENT_USER.id });
+          
+          // Labels normais
+          $('statActiveLabel').textContent = 'Prospects Ativos';
+          $('statPendingLabel').textContent = 'Follow-ups Pendentes';
+          $('statNewLabel').textContent = 'Novos este Mês';
+        }
         
         if (result.success && result.stats) {
           $('statActive').textContent = result.stats.ativos || 0;
@@ -1117,7 +1170,6 @@
         const prospect = result.data;
         currentProspectId = id;
 
-        // Update header info
         $('detailInitials').textContent = (prospect.razaoSocial || '??').slice(0, 2).toUpperCase();
         $('detailRazaoSocial').textContent = prospect.razaoSocial || '-';
         $('detailCnpj').textContent = prospect.cnpj || '-';
@@ -1128,7 +1180,6 @@
         $('detailEmail').textContent = prospect.email || 'Não informado';
         $('detailResponsavel').textContent = prospect.responsavelNome || '-';
 
-        // Render timeline
         renderTimeline(prospect.followups || []);
 
         showView('view-prospect-detail');
@@ -1170,7 +1221,6 @@
     // EVENT HANDLERS
     // =============================================
     
-    // CNPJ Input Mask
     $('cnpjInput').addEventListener('input', (e) => {
       e.target.value = formatCNPJ(e.target.value);
     });
@@ -1179,7 +1229,6 @@
       e.target.value = formatCNPJ(e.target.value);
     });
 
-    // User Selection
     $('selectUser').addEventListener('change', (e) => {
       const selectedOption = e.target.options[e.target.selectedIndex];
       CURRENT_USER.id = e.target.value;
@@ -1190,11 +1239,11 @@
       $('userCode').textContent = CURRENT_USER.id || '-';
       $('gerenteSenha').value = '';
       
+      setGerenteMode(false);
       loadProspects();
       updateStats();
     });
 
-    // Gerente Login
     $('btnGerenteLogin').addEventListener('click', async () => {
       const senha = $('gerenteSenha').value.trim();
       
@@ -1222,6 +1271,7 @@
         $('userCode').textContent = 'Acesso Total';
         $('selectUser').value = '';
         
+        setGerenteMode(true);
         loadProspects();
         updateStats();
         showToast('Acesso de gerente liberado!', 'success');
@@ -1234,7 +1284,20 @@
       }
     });
 
-    // Search Form
+    $('btnLogout').addEventListener('click', () => {
+      CURRENT_USER = { id: '', nome: '', tipo: 'representante' };
+      
+      $('userName').textContent = 'Selecione um usuário';
+      $('userCode').textContent = '-';
+      $('gerenteSenha').value = '';
+      $('selectUser').value = '';
+      
+      setGerenteMode(false);
+      loadProspects();
+      updateStats();
+      showToast('Você saiu da conta de gerente', 'success');
+    });
+
     $('searchForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -1289,13 +1352,11 @@
       }
     });
 
-    // New Prospect Button
     $('btnNewProspect').addEventListener('click', () => {
       $('newCnpj').value = '';
       showView('view-new-prospect');
     });
 
-    // Back buttons
     $('btnBackFromNew').addEventListener('click', () => showView('view-search'));
     $('btnCancelNew').addEventListener('click', () => showView('view-search'));
     
@@ -1306,14 +1367,12 @@
       updateStats();
     });
 
-    // Refresh button
     $('btnRefresh').addEventListener('click', () => {
       loadProspects();
       updateStats();
       showToast('Dados atualizados', 'success');
     });
 
-    // New Prospect Form
     $('newProspectForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -1383,7 +1442,6 @@
       }
     });
 
-    // Conflict Modal
     $('btnAccessExisting').addEventListener('click', () => {
       closeModal(conflictModal);
       showProspectDetail(currentProspectId);
@@ -1392,7 +1450,6 @@
     $('btnCloseConflict').addEventListener('click', () => closeModal(conflictModal));
     $('btnCloseConflict2').addEventListener('click', () => closeModal(conflictModal));
 
-    // Follow-up Modal
     $('btnAddFollowup').addEventListener('click', () => openModal(followupModal));
     $('btnCloseFollowup').addEventListener('click', () => closeModal(followupModal));
 
@@ -1439,7 +1496,6 @@
       }
     });
 
-    // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', () => {
         closeModal(conflictModal);
@@ -1447,7 +1503,6 @@
       });
     });
 
-    // Keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeModal(conflictModal);
@@ -1464,6 +1519,7 @@
       
       try {
         await loadRepresentantes();
+        setGerenteMode(false);
       } catch (error) {
         console.error('Erro na inicialização:', error);
         setOnlineStatus('offline');
