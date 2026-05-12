@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Prospects</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0f1a;
+      --bg-secondary: #111827;
+      --fg: #f1f5f9;
+      --muted: #64748b;
+      --accent: #10b981;
+      --accent-light: #34d399;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --card: #1e293b;
+      --border: #334155;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+    }
+    
+    .font-display { font-family: 'Space Grotesk', sans-serif; }
+    
+    .bg-pattern {
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16, 185, 129, 0.12), transparent),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-secondary) 100%);
+      background-attachment: fixed;
+    }
+    
+    .grid-bg {
+      background-size: 50px 50px;
+      background-image: 
+        linear-gradient(to right, rgba(51, 65, 85, 0.25) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(51, 65, 85, 0.25) 1px, transparent 1px);
+    }
+    
+    .glass {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+    }
+    
+    .input-field {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #059669);
+      color: white;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+    }
+    
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-secondary {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    
+    .btn-secondary:hover { background: var(--border); }
+    
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-block;
+    }
+    
+    .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--accent-light); }
+    .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+    .badge-blocked { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-in { animation: fadeInUp 0.5s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .modal-bg {
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 500;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 9999;
+    }
+    
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: var(--accent); color: white; }
+    .toast-error { background: var(--danger); color: white; }
+    
+    .card-hover { transition: all 0.3s; }
+    .card-hover:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="bg-pattern grid-bg">
+  
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+    <div class="text-center">
+      <div class="spinner mx-auto mb-3" style="width: 40px; height: 40px; border-width: 3px;"></div>
+      <p style="color: var(--muted);">Carregando...</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="glass sticky top-0 z-40 border-b border-[var(--border)]">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-white">Prospect Manager</h1>
+          <p class="text-xs text-[var(--muted)]">Sistema de Representantes</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 text-sm">
+          <span id="statusDot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span id="statusText" style="color: var(--muted);">Conectando...</span>
+        </div>
+        <div class="flex items-center gap-2 pl-3 border-l border-[var(--border)]">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-medium" id="userName">Carlos Silva</p>
+            <p class="text-xs text-[var(--muted)]" id="userCode">REP-0042</p>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm">
+            CS
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    
+    <!-- View: Search -->
+    <section id="viewSearch" class="space-y-8">
+      
+      <!-- Hero -->
+      <div class="text-center py-6 animate-in">
+        <h2 class="font-display text-3xl sm:text-4xl font-bold mb-3">
+          Gestão de <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Prospects</span>
+        </h2>
+        <p style="color: var(--muted);" class="max-w-xl mx-auto">
+          Consulte, cadastre e gerencie seus prospects.
+        </p>
+      </div>
+      
+      <!-- Search Card -->
+      <div class="max-w-xl mx-auto animate-in delay-1">
+        <div class="glass rounded-2xl p-6 card-hover">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-display font-semibold text-lg">Consultar CNPJ</h3>
+              <p class="text-sm" style="color: var(--muted);">Verifique se o prospect já existe</p>
+            </div>
+          </div>
+          
+          <form id="searchForm" class="space-y-4">
+            <div class="relative">
+              <input 
+                type="text" 
+                id="searchCnpj" 
+                class="input-field px-4 py-3.5 rounded-xl text-lg font-mono tracking-wide"
+                placeholder="00.000.000/0000-00"
+                maxlength="18"
+                autocomplete="off"
+              >
+              <div id="searchSpinner" class="absolute right-4 top-1/2 -translate-y-1/2 hidden">
+                <div class="spinner"></div>
+              </div>
+            </div>
+            
+            <div class="flex gap-3">
+              <button type="submit" id="btnSearch" class="btn-primary flex-1 py-3 rounded-xl flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Consultar
+              </button>
+              <button type="button" id="btnNewProspect" class="btn-secondary py-3 px-5 rounded-xl flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Novo
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Stats -->
+      <div class="grid grid-cols-3 gap-4 animate-in delay-2">
+        <div class="glass rounded-xl p-4 text-center card-hover">
+          <p class="text-2xl font-display font-bold text-emerald-400" id="statActive">-</p>
+          <p class="text-xs" style="color: var(--muted);">Ativos</p>
+        </div>
+        <div class="glass rounded-xl p-4 text-center card-hover">
+          <p class="text-2xl font-display font-bold text-amber-400" id="statPending">-</p>
+          <p class="text-xs" style="color: var(--muted);">Pendentes</p>
+        </div>
+        <div class="glass rounded-xl p-4 text-center card-hover">
+          <p class="text-2xl font-display font-bold text-blue-400" id="statNew">-</p>
+          <p class="text-xs" style="color: var(--muted);">Novos</p>
+        </div>
+      </div>
+      
+      <!-- Prospects List -->
+      <div class="animate-in delay-2">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-display font-semibold">Seus Prospects</h3>
+          <button id="btnRefresh" class="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-transparent border-none cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Atualizar
+          </button>
+        </div>
+        
+        <div class="glass rounded-xl overflow-hidden">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-[var(--border)] text-left">
+                <th class="px-4 py-3 text-sm font-medium" style="color: var(--muted);">Empresa</th>
+                <th class="px-4 py-3 text-sm font-medium hidden sm:table-cell" style="color: var(--muted);">CNPJ</th>
+                <th class="px-4 py-3 text-sm font-medium" style="color: var(--muted);">Status</th>
+                <th class="px-4 py-3 text-sm font-medium hidden md:table-cell" style="color: var(--muted);">Atualizado</th>
+                <th class="px-4 py-3 text-right"></th>
+              </tr>
+            </thead>
+            <tbody id="prospectsTable">
+              <tr>
+                <td colspan="5" class="px-4 py-8 text-center" style="color: var(--muted);">
+                  <div class="spinner mx-auto mb-2"></div>
+                  Carregando...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: New Prospect Form -->
+    <section id="viewNewProspect" class="hidden">
+      <button id="btnBackNew" class="flex items-center gap-2 text-[var(--muted)] hover:text-white mb-6 bg-transparent border-none cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Voltar
+      </button>
+      
+      <div class="glass rounded-2xl p-6 sm:p-8 max-w-2xl">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-semibold text-lg">Novo Prospect</h3>
+            <p class="text-sm" style="color: var(--muted);">Preencha os dados para cadastro</p>
+          </div>
+        </div>
+        
+        <form id="newProspectForm" class="space-y-4">
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">CNPJ *</label>
+              <input type="text" id="newCnpj" class="input-field px-4 py-2.5 rounded-lg font-mono" placeholder="00.000.000/0000-00" required>
+            </div>
+            
+            <div class="sm:col-span-2">
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">Razão Social *</label>
+              <input type="text" id="newRazao" class="input-field px-4 py-2.5 rounded-lg" placeholder="Nome da empresa" required>
+            </div>
+            
+            <div class="sm:col-span-2">
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">Nome Fantasia</label>
+              <input type="text" id="newFantasia" class="input-field px-4 py-2.5 rounded-lg" placeholder="Nome fantasia">
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">Segmento</label>
+              <select id="newSegmento" class="input-field px-4 py-2.5 rounded-lg">
+                <option value="">Selecione...</option>
+                <option value="industria">Indústria</option>
+                <option value="comercio">Comércio</option>
+                <option value="servicos">Serviços</option>
+                <option value="tecnologia">Tecnologia</option>
+                <option value="saude">Saúde</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">Telefone</label>
+              <input type="tel" id="newTelefone" class="input-field px-4 py-2.5 rounded-lg" placeholder="(00) 00000-0000">
+            </div>
+            
+            <div class="sm:col-span-2">
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">E-mail</label>
+              <input type="email" id="newEmail" class="input-field px-4 py-2.5 rounded-lg" placeholder="email@empresa.com">
+            </div>
+            
+            <div class="sm:col-span-2">
+              <label class="block text-sm mb-1.5" style="color: var(--muted);">Observações</label>
+              <textarea id="newObs" class="input-field px-4 py-2.5 rounded-lg resize-none" rows="2" placeholder="Informações relevantes..."></textarea>
+            </div>
+          </div>
+          
+          <div class="flex gap-3 pt-4 border-t border-[var(--border)]">
+            <button type="submit" id="btnSaveProspect" class="btn-primary flex-1 py-2.5 rounded-lg">Cadastrar</button>
+            <button type="button" id="btnCancelNew" class="btn-secondary py-2.5 px-5 rounded-lg">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- View: Prospect Detail -->
+    <section id="viewDetail" class="hidden">
+      <button id="btnBackDetail" class="flex items-center gap-2 text-[var(--muted)] hover:text-white mb-6 bg-transparent border-none cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Voltar
+      </button>
+      
+      <div class="glass rounded-2xl p-6 sm:p-8 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-display font-bold text-xl" id="detailInitials">
+              --
+            </div>
+            <div>
+              <h2 class="font-display text-xl font-bold" id="detailRazao">-</h2>
+              <p style="color: var(--muted);" class="font-mono text-sm" id="detailCnpj">-</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span id="detailStatus" class="badge badge-active">Ativo</span>
+                <span class="text-sm" style="color: var(--muted);" id="detailSegmento">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <button id="btnAddFollowup" class="btn-primary py-2 px-4 rounded-lg text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Follow-up
+          </button>
+        </div>
+        
+        <div class="grid sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-[var(--border)]">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" style="color: var(--muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
+            <div>
+              <p class="text-xs" style="color: var(--muted);">Telefone</p>
+              <p class="text-sm" id="detailTelefone">-</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" style="color: var(--muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <div>
+              <p class="text-xs" style="color: var(--muted);">E-mail</p>
+              <p class="text-sm" id="detailEmail">-</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5" style="color: var(--muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <div>
+              <p class="text-xs" style="color: var(--muted);">Responsável</p>
+              <p class="text-sm" id="detailResponsavel">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Timeline -->
+      <div class="glass rounded-2xl p-6">
+        <h3 class="font-display font-semibold mb-4">Histórico de Follow-ups</h3>
+        <div id="timeline" class="relative pl-12">
+          <p style="color: var(--muted);" class="text-sm">Carregando...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Conflict -->
+  <div id="modalConflict" class="fixed inset-0 z-50 hidden">
+    <div class="modal-bg absolute inset-0"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="glass rounded-2xl max-w-md w-full p-6 relative z-10 animate-in">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-11 h-11 rounded-xl bg-red-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-semibold">CNPJ Já Cadastrado</h3>
+            <p class="text-sm" style="color: var(--muted);">Este prospect já existe</p>
+          </div>
+        </div>
+        
+        <div style="background: var(--bg);" class="rounded-lg p-4 mb-4 text-sm">
+          <div class="flex justify-between mb-2">
+            <span style="color: var(--muted);">Empresa:</span>
+            <span id="conflictEmpresa">-</span>
+          </div>
+          <div class="flex justify-between mb-2">
+            <span style="color: var(--muted);">Responsável:</span>
+            <span id="conflictResp">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span style="color: var(--muted);">Status:</span>
+            <span id="conflictStatus" class="badge badge-active">Ativo</span>
+          </div>
+        </div>
+        
+        <div id="conflictSameUser" class="hidden">
+          <p class="text-sm mb-4" style="color: var(--muted);">Este prospect está vinculado à sua conta.</p>
+          <div class="flex gap-3">
+            <button id="btnAccessProspect" class="btn-primary flex-1 py-2.5 rounded-lg">Acessar</button>
+            <button id="btnCloseConflict1" class="btn-secondary py-2.5 px-4 rounded-lg">Fechar</button>
+          </div>
+        </div>
+        
+        <div id="conflictOtherUser" class="hidden">
+          <p class="text-sm mb-4" style="color: var(--muted);">Vinculado a outro representante. Solicite autorização ao administrador.</p>
+          <div class="flex gap-3">
+            <a id="btnEmailAdmin" href="#" class="btn-primary flex-1 py-2.5 rounded-lg text-center text-sm no-underline">Solicitar Acesso</a>
+            <button id="btnCloseConflict2" class="btn-secondary py-2.5 px-4 rounded-lg">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Follow-up -->
+  <div id="modalFollowup" class="fixed inset-0 z-50 hidden">
+    <div class="modal-bg absolute inset-0"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="glass rounded-2xl max-w-md w-full p-6 relative z-10 animate-in">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-display font-semibold">Novo Follow-up</h3>
+            <p class="text-sm" style="color: var(--muted);">Registre o acompanhamento</p>
+          </div>
+        </div>
+        
+        <form id="followupForm" class="space-y-4">
+          <div>
+            <label class="block text-sm mb-1.5" style="color: var(--muted);">Status *</label>
+            <select id="fpStatus" class="input-field px-4 py-2.5 rounded-lg" required>
+              <option value="">Selecione...</option>
+              <option value="em_negociacao">Em Negociação</option>
+              <option value="aguardando_retorno">Aguardando Retorno</option>
+              <option value="proposta_enviada">Proposta Enviada</option>
+              <option value="fechado">Fechado</option>
+              <option value="perdido">Perdido</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm mb-1.5" style="color: var(--muted);">Próximos Passos *</label>
+            <input type="text" id="fpProximos" class="input-field px-4 py-2.5 rounded-lg" placeholder="Ex: Agendar reunião" required>
+          </div>
+          
+          <div>
+            <label class="block text-sm mb-1.5" style="color: var(--muted);">Observações</label>
+            <textarea id="fpObs" class="input-field px-4 py-2.5 rounded-lg resize-none" rows="2" placeholder="Detalhes..."></textarea>
+          </div>
+          
+          <div class="flex gap-3 pt-2">
+            <button type="submit" class="btn-primary flex-1 py-2.5 rounded-lg">Registrar</button>
+            <button type="button" id="btnCloseFollowup" class="btn-secondary py-2.5 px-4 rounded-lg">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // =============================================
+    // CONFIGURAÇÃO - COLE SUA URL AQUI
+    // =============================================
+    const API_URL = https://script.google.com/macros/s/AKfycbxxFZFp0ofleUihxPWD6y_9ZIhWSY_icFM-gXOOPId04td8x8VzVcn6HpseJGWZcBl_/exec; // <-- COLE SUA URL AQUI
+    
+    const USER = {
+      id: 'REP-0042',
+      nome: 'Carlos Silva'
+    };
+    
+    // =============================================
+    // ELEMENTOS DOM
+    // =============================================
+    const $ = id => document.getElementById(id);
+    const loadingOverlay = $('loadingOverlay');
+    const viewSearch = $('viewSearch');
+    const viewNewProspect = $('viewNewProspect');
+    const viewDetail = $('viewDetail');
+    const modalConflict = $('modalConflict');
+    const modalFollowup = $('modalFollowup');
+    const toast = $('toast');
+    
+    let currentProspectId = null;
+    let jsonpCounter = 0;
+    
+    // =============================================
+    // API COM JSONP
+    // =============================================
+    const api = {
+      get(action, params = {}) {
+        return new Promise((resolve, reject) => {
+          const callbackName = 'jsonp_callback_' + (++jsonpCounter);
+          
+          window[callbackName] = (data) => {
+            delete window[callbackName];
+            if (script.parentNode) document.body.removeChild(script);
+            resolve(data);
+          };
+          
+          const url = new URL(API_URL);
+          url.searchParams.set('action', action);
+          url.searchParams.set('callback', callbackName);
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') {
+              url.searchParams.set(k, encodeURIComponent(v));
+            }
+          });
+          
+          const script = document.createElement('script');
+          script.src = url.toString();
+          script.onerror = () => {
+            delete window[callbackName];
+            if (script.parentNode) document.body.removeChild(script);
+            reject(new Error('Erro de conexão'));
+          };
+          
+          document.body.appendChild(script);
+        });
+      },
+      
+      post(action, data) {
+        return this.get(action, data);
+      }
+    };
+    
+    // =============================================
+    // UTILITÁRIOS
+    // =============================================
+    function formatCNPJ(v) {
+      return v.replace(/\D/g, '')
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .slice(0, 18);
+    }
+    
+    function formatDate(d) {
+      if (!d) return '-';
+      try {
+        const date = new Date(d);
+        return date.toLocaleDateString('pt-BR');
+      } catch (e) {
+        return '-';
+      }
+    }
+    
+    function showToast(msg, type = 'success') {
+      toast.textContent = msg;
+      toast.className = `toast toast-${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+    
+    function showView(view) {
+      viewSearch.classList.add('hidden');
+      viewNewProspect.classList.add('hidden');
+      viewDetail.classList.add('hidden');
+      view.classList.remove('hidden');
+    }
+    
+    function showModal(modal) {
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function hideModal(modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function setLoading(show) {
+      loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+    
+    function statusBadge(status) {
+      const map = {
+        'ativo': ['Ativo', 'badge-active'],
+        'pendente': ['Pendente', 'badge-pending'],
+        'bloqueado': ['Bloqueado', 'badge-blocked']
+      };
+      return map[status] || ['Ativo', 'badge-active'];
+    }
+    
+    // =============================================
+    // RENDERIZAÇÃO
+    // =============================================
+    async function loadProspects() {
+      const tbody = $('prospectsTable');
+      tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center" style="color: var(--muted);"><div class="spinner mx-auto mb-2"></div>Carregando...</td></tr>';
+      
+      try {
+        const res = await api.get('getByUser', { userId: USER.id });
+        
+        if (!res.success) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-400">Erro: ' + (res.error || 'Desconhecido') + '</td></tr>';
+          return;
+        }
+        
+        const data = res.data || [];
+        
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center" style="color: var(--muted);">Nenhum prospect cadastrado. Clique em "Novo" para começar.</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = data.map(p => {
+          const [label, cls] = statusBadge(p.status);
+          return `
+            <tr class="border-b border-[var(--border)] hover:bg-white/5 cursor-pointer" data-id="${p.id}">
+              <td class="px-4 py-3">
+                <p class="font-medium">${p.razaoSocial || '-'}</p>
+                <p class="text-xs sm:hidden font-mono" style="color: var(--muted);">${p.cnpj || '-'}</p>
+              </td>
+              <td class="px-4 py-3 font-mono text-sm hidden sm:table-cell" style="color: var(--muted);">${p.cnpj || '-'}</td>
+              <td class="px-4 py-3"><span class="badge ${cls}">${label}</span></td>
+              <td class="px-4 py-3 text-sm hidden md:table-cell" style="color: var(--muted);">${formatDate(p.atualizadoEm)}</td>
+              <td class="px-4 py-3 text-right">
+                <svg class="w-5 h-5 inline" style="color: var(--accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+        tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+          tr.addEventListener('click', () => showDetail(tr.dataset.id));
+        });
+        
+        $('statusDot').className = 'w-2 h-2 rounded-full bg-emerald-500';
+        $('statusText').textContent = 'Online';
+        
+      } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-red-400">Erro de conexão com a API</td></tr>';
+        $('statusDot').className = 'w-2 h-2 rounded-full bg-red-500';
+        $('statusText').textContent = 'Offline';
+      }
+    }
+    
+    async function loadStats() {
+      try {
+        const res = await api.get('getStats', { userId: USER.id });
+        if (res.success) {
+          $('statActive').textContent = res.stats.ativos || 0;
+          $('statPending').textContent = res.stats.pendentes || 0;
+          $('statNew').textContent = res.stats.novos || 0;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    async function showDetail(id) {
+      setLoading(true);
+      
+      try {
+        const res = await api.get('getById', { id });
+        
+        if (!res.success) {
+          showToast('Erro ao carregar prospect', 'error');
+          setLoading(false);
+          return;
+        }
+        
+        const p = res.data;
+        currentProspectId = id;
+        
+        $('detailInitials').textContent = (p.razaoSocial || '??').slice(0, 2).toUpperCase();
+        $('detailRazao').textContent = p.razaoSocial || '-';
+        $('detailCnpj').textContent = p.cnpj || '-';
+        $('detailSegmento').textContent = p.segmento || '-';
+        $('detailTelefone').textContent = p.telefone || '-';
+        $('detailEmail').textContent = p.email || '-';
+        $('detailResponsavel').textContent = p.responsavelNome || '-';
+        
+        const [label, cls] = statusBadge(p.status);
+        $('detailStatus').textContent = label;
+        $('detailStatus').className = `badge ${cls}`;
+        
+        // Timeline
+        const fps = p.followups || [];
+        const timeline = $('timeline');
+        
+        if (fps.length === 0) {
+          timeline.innerHTML = '<p style="color: var(--muted);" class="text-sm">Nenhum follow-up registrado.</p>';
+        } else {
+          timeline.innerHTML = fps.map(fp => `
+            <div class="relative pb-6 last:pb-0">
+              <div class="absolute left-0 top-0 w-9 h-9 rounded-full bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center">
+                <span class="text-emerald-400 text-xs font-bold">${fp.id || '•'}</span>
+              </div>
+              <div class="bg-[var(--bg)] rounded-lg p-4 ml-6">
+                <div class="flex justify-between mb-1">
+                  <span class="font-medium text-sm">${fp.status || '-'}</span>
+                  <span class="text-xs" style="color: var(--muted);">${formatDate(fp.data)}</span>
+                </div>
+                <p class="text-sm" style="color: var(--muted);"><strong>Próximos:</strong> ${fp.proximos || '-'}</p>
+                ${fp.obs ? `<p class="text-sm mt-1" style="color: var(--muted);">${fp.obs}</p>` : ''}
+                <p class="text-xs mt-2" style="color: var(--muted);">por ${fp.autor || '-'}</p>
+              </div>
+            </div>
+          `).join('');
+        }
+        
+        showView(viewDetail);
+        
+      } catch (err) {
+        console.error(err);
+        showToast('Erro de conexão', 'error');
+      }
+      
+      setLoading(false);
+    }
+    
+    // =============================================
+    // EVENTOS
+    // =============================================
+    
+    // Máscara CNPJ
+    $('searchCnpj').addEventListener('input', e => e.target.value = formatCNPJ(e.target.value));
+    $('newCnpj').addEventListener('input', e => e.target.value = formatCNPJ(e.target.value));
+    
+    // Busca
+    $('searchForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const cnpj = $('searchCnpj').value.trim();
+      
+      if (cnpj.replace(/\D/g, '').length < 14) {
+        showToast('Digite um CNPJ válido', 'error');
+        return;
+      }
+      
+      $('searchSpinner').classList.remove('hidden');
+      $('btnSearch').disabled = true;
+      
+      try {
+        const res = await api.get('getByCnpj', { cnpj });
+        
+        $('searchSpinner').classList.add('hidden');
+        $('btnSearch').disabled = false;
+        
+        if (!res.success) {
+          showToast('Erro na consulta', 'error');
+          return;
+        }
+        
+        if (res.exists) {
+          const p = res.data;
+          $('conflictEmpresa').textContent = p.razaoSocial || '-';
+          $('conflictResp').textContent = p.responsavelNome || '-';
+          
+          const [label, cls] = statusBadge(p.status);
+          $('conflictStatus').textContent = label;
+          $('conflictStatus').className = `badge ${cls}`;
+          
+          if (p.responsavelId === USER.id) {
+            $('conflictSameUser').classList.remove('hidden');
+            $('conflictOtherUser').classList.add('hidden');
+          } else {
+            $('conflictSameUser').classList.add('hidden');
+            $('conflictOtherUser').classList.remove('hidden');
+            
+            const body = encodeURIComponent(`Olá, gostaria de solicitar acesso ao prospect:\n\nCNPJ: ${p.cnpj}\nEmpresa: ${p.razaoSocial}\nResponsável atual: ${p.responsavelNome}`);
+            $('btnEmailAdmin').href = `mailto:admin@empresa.com?subject=Solicitação de Acesso - ${p.razaoSocial}&body=${body}`;
+          }
+          
+          currentProspectId = p.id;
+          showModal(modalConflict);
+        } else {
+          $('newCnpj').value = cnpj;
+          showView(viewNewProspect);
+          showToast('CNPJ disponível para cadastro');
+        }
+      } catch (err) {
+        $('searchSpinner').classList.add('hidden');
+        $('btnSearch').disabled = false;
+        showToast('Erro de conexão', 'error');
+      }
+    });
+    
+    // Novo
+    $('btnNewProspect').addEventListener('click', () => {
+      $('newCnpj').value = '';
+      showView(viewNewProspect);
+    });
+    
+    // Voltar
+    $('btnBackNew').addEventListener('click', () => showView(viewSearch));
+    $('btnCancelNew').addEventListener('click', () => showView(viewSearch));
+    $('btnBackDetail').addEventListener('click', () => {
+      currentProspectId = null;
+      loadProspects();
+      loadStats();
+      showView(viewSearch);
+    });
+    
+    // Refresh
+    $('btnRefresh').addEventListener('click', () => {
+      loadProspects();
+      loadStats();
+      showToast('Dados atualizados');
+    });
+    
+    // Salvar Prospect
+    $('newProspectForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      
+      const cnpj = $('newCnpj').value.trim();
+      const razao = $('newRazao').value.trim();
+      
+      if (cnpj.replace(/\D/g, '').length < 14) {
+        showToast('CNPJ inválido', 'error');
+        return;
+      }
+      
+      if (!razao) {
+        showToast('Razão Social é obrigatória', 'error');
+        return;
+      }
+      
+      $('btnSaveProspect').disabled = true;
+      $('btnSaveProspect').textContent = 'Salvando...';
+      
+      try {
+        const res = await api.post('addProspect', {
+          cnpj,
+          razaoSocial: razao,
+          nomeFantasia: $('newFantasia').value.trim(),
+          segmento: $('newSegmento').value,
+          telefone: $('newTelefone').value.trim(),
+          email: $('newEmail').value.trim(),
+          observacoes: $('newObs').value.trim(),
+          responsavelId: USER.id,
+          responsavelNome: USER.nome
+        });
+        
+        $('btnSaveProspect').disabled = false;
+        $('btnSaveProspect').textContent = 'Cadastrar';
+        
+        if (!res.success) {
+          if (res.existingProspect) {
+            showToast('CNPJ já cadastrado', 'error');
+          } else {
+            showToast(res.error || 'Erro ao salvar', 'error');
+          }
+          return;
+        }
+        
+        showToast('Prospect cadastrado!');
+        $('newProspectForm').reset();
+        loadProspects();
+        loadStats();
+        showDetail(res.data.id);
+        
+      } catch (err) {
+        $('btnSaveProspect').disabled = false;
+        $('btnSaveProspect').textContent = 'Cadastrar';
+        showToast('Erro de conexão', 'error');
+      }
+    });
+    
+    // Conflict Modal
+    $('btnAccessProspect').addEventListener('click', () => {
+      hideModal(modalConflict);
+      showDetail(currentProspectId);
+    });
+    $('btnCloseConflict1').addEventListener('click', () => hideModal(modalConflict));
+    $('btnCloseConflict2').addEventListener('click', () => hideModal(modalConflict));
+    
+    // Follow-up Modal
+    $('btnAddFollowup').addEventListener('click', () => showModal(modalFollowup));
+    $('btnCloseFollowup').addEventListener('click', () => hideModal(modalFollowup));
+    
+    $('followupForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      
+      const status = $('fpStatus').value;
+      const proximos = $('fpProximos').value.trim();
+      
+      if (!status || !proximos) {
+        showToast('Preencha os campos obrigatórios', 'error');
+        return;
+      }
+      
+      try {
+        const res = await api.post('addFollowup', {
+          prospectId: currentProspectId,
+          status,
+          proximos,
+          obs: $('fpObs').value.trim(),
+          autor: USER.nome
+        });
+        
+        if (!res.success) {
+          showToast(res.error || 'Erro ao salvar', 'error');
+          return;
+        }
+        
+        hideModal(modalFollowup);
+        $('followupForm').reset();
+        showDetail(currentProspectId);
+        showToast('Follow-up registrado!');
+        
+      } catch (err) {
+        showToast('Erro de conexão', 'error');
+      }
+    });
+    
+    // Fechar modais clicando fora
+    [modalConflict, modalFollowup].forEach(modal => {
+      modal.querySelector('.modal-bg').addEventListener('click', () => hideModal(modal));
+    });
+    
+    // ESC fecha modais
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        hideModal(modalConflict);
+        hideModal(modalFollowup);
+      }
+    });
+    
+    // =============================================
+    // INIT
+    // =============================================
+    async function init() {
+      setLoading(true);
+      
+      try {
+        await Promise.all([loadProspects(), loadStats()]);
+      } catch (err) {
+        console.error(err);
+        $('statusDot').className = 'w-2 h-2 rounded-full bg-red-500';
+        $('statusText').textContent = 'Offline';
+      }
+      
+      setLoading(false);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
